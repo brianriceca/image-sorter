@@ -100,7 +100,7 @@ imagepointer = 0
 
 layout = [  [sg.Text(f"Simple image sorter: {_fnames(imagepointer)}", key='-TITLE-')],
             [sg.Text('', size=(50,1), key='-FEEDBACK-')],
-            [sg.Image(convert_to_bytes(_fnames(imagepointer),resize=default_size,dirpath=folder),key='-IMAGE-')],
+            [sg.Image(convert_to_bytes(_fnames(imagepointer),resize=default_size,dirpath=folder),size=default_size,key='-IMAGE-')],
             [sg.Button('Prev'), sg.Button('Next'), sg.Button('Delete',button_color=('#FFFFFF','#FF0000')),sg.Button('Quit')] ]
 
 window = sg.Window('Image Sorter', layout, resizable=True,
@@ -118,13 +118,13 @@ while True:
     imagepointer = imagepointer-1 if imagepointer > 0 else len(fnames)-1
     window['-FEEDBACK-'].update(f'imagepointer is {imagepointer}')
     window['-TITLE-'].update(f"Simple image sorter: {_fnames(imagepointer)}")
-    window['-IMAGE-'].update(data=convert_to_bytes(_fnames(imagepointer),resize=default_size,dirpath=folder))
+    window['-IMAGE-'].update(data=convert_to_bytes(_fnames(imagepointer),resize=default_size,dirpath=folder),size=default_size)
     continue
-  if str(event).startswith('Right:') or event == 'Next':
+  if str(event).startswith('Right:') or event == 'Next' or event == 'image_clicked':
     imagepointer = imagepointer+1 if imagepointer < len(fnames)-1 else 0
     window['-FEEDBACK-'].update(f'imagepointer is {imagepointer}')
     window['-TITLE-'].update(f"Simple image sorter: {_fnames(imagepointer)}")
-    window['-IMAGE-'].update(data=convert_to_bytes(_fnames(imagepointer),resize=default_size,dirpath=folder))
+    window['-IMAGE-'].update(data=convert_to_bytes(_fnames(imagepointer),resize=default_size,dirpath=folder),size=default_size)
     continue
   if event in set_of_keys:
     window['-FEEDBACK-'].update(value=f"You want to move this to '{directory_for_key[event]}'")

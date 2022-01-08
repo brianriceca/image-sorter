@@ -50,7 +50,7 @@ except:
   file_list = []
 
 fnames = [f for f in file_list if os.path.isfile(
-            os.path.join(folder, f)) and f.lower().endswith((".png", ".jpg", "jpeg", ".tiff", ".bmp"))]
+            os.path.join(folder, f)) and f.lower().endswith((".png", ".jpg", ".jpeg", ".tiff", ".bmp"))]
 
 if len(fnames) == 0:
   raise RuntimeError(f'No image files in {folder}')
@@ -64,10 +64,10 @@ sg.theme('DarkGreen')
 
 imagepointer = 0
 
-layout = [  [sg.Text(f"Simple image sorter: {fnames[imagepointer]}", enable_events=True, key='-T-')],
-            [sg.Text('', size=(18,1), key='feedback')],
-            [sg.Image(convert_to_bytes(fnames[imagepointer]),enable_events=True,key='-I-')],
-            [sg.Button('Back'), sg.Button('Quit')] ]
+layout = [  [sg.Text(f"Simple image sorter: {fnames[imagepointer]}", key='-TITLE-')],
+            [sg.Text('', size=(18,1), key='-FEEDBACK-')],
+            [sg.Image(convert_to_bytes(fnames[imagepointer]),key='-IMAGE-')],
+            [sg.Button('Prev'), sg.Button('Next'), sg.Button('Quit')] ]
 
 window = sg.Window('Image Sorter', layout, resizable=True,
              return_keyboard_events=True, use_default_focus=False)
@@ -76,24 +76,29 @@ of = open('eventlog.txt','a')
                                                 
 while True:
   event, values = window.read()
-  thetitle = window['-T-']
-  thefeedback = window['feedback']
-  theimage = window['-I-']
-  if event == sg.WIN_CLOSED or event == 'Quit':
+  if event == sg.WIN_CLOSED or event == 'Quit' or event is None:
     break
   if len(event) == 1:
-    thefeedback.update(value='%s - %s' % (event, ord(event)))
-  if str(event).startswith('space:'):
+    window['-FEEDBACK-'].update(value=f"Got char {event}")
+    continue
+  if str(event).startswith('Right:') or event == 'Prev':
+    imagepointer = imagepointer-1 if imagepointer > 0 else len(fnames)
+    window['-FEEDBACK-'].update(f'imagepointer is {imagepointer}')
+    window['-TITLE-'].update(f"Simple image sorter: {fnames[imagepointer]}")
+    window['-IMAGE-'].update(data=convert_to_bytes(fnames[imagepointer]))
+    continue
+  if str(event).startswith('Left:') or event == 'Next':
     imagepointer = imagepointer+1 if imagepointer < len(fnames) else 0
-    thetitle.update(value=f"Simple image sorter: {fnames[imagepointer]}")
-    theimage.update(convert_to_bytes(fnames[imagepointer]))
-  if event is not None:
-    thefeedback.update(value=f"I got '{event}'")
-    print(event , file=of)
+    window['-FEEDBACK-'].update(f'imagepointer is {imagepointer}')
+    window['-TITLE-'].update(f"Simple image sorter: {fnames[imagepointer]}")
+    window['-IMAGE-'].update(data=convert_to_bytes(fnames[imagepointer]))
+    continue
+  window['-FEEDBACK-'].update(value=f"I got '{event}'")
+  print(event , file=of)
 #    if event in set_of_keys:
-#      thefeedback.update(value=f"You want me to move this to {directory_for_key[event]}")
+#      window['-FEEDBACK-'].update(value=f"You want me to move this to {directory_for_key[event]}")
 #    else:
-#      thefeedback.update(value=f"I don't recognize {event}")
+#      window['-FEEDBACK-'].update(value=f"I don't recognize {event}")
 
 window.close()
 of.close()

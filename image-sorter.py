@@ -2,6 +2,7 @@
 
 import PySimpleGUI as sg                        
 import os.path
+import shutil
 import PIL.Image as pilimage
 import sys
 import base64
@@ -99,7 +100,7 @@ sg.theme('DarkGreen')
 imagepointer = 0
 
 layout = [  [sg.Text(f"Simple image sorter: {_fnames(imagepointer)}", key='-TITLE-')],
-            [sg.Text('', size=(50,1), key='-FEEDBACK-')],
+            [sg.Text('', size=(80,1), key='-FEEDBACK-')],
             [sg.Image(convert_to_bytes(_fnames(imagepointer),resize=default_size,dirpath=folder),size=default_size,key='-IMAGE-')],
             [sg.Button('Prev'), sg.Button('Next'), sg.Button('Delete',button_color=('#FFFFFF','#FF0000')),sg.Button('Quit')] ]
 
@@ -126,5 +127,23 @@ while True:
     window['-TITLE-'].update(f"Simple image sorter: {_fnames(imagepointer)}")
     window['-IMAGE-'].update(data=convert_to_bytes(_fnames(imagepointer),resize=default_size,dirpath=folder),size=default_size)
     continue
-  if event in set_of_keys:
-    window['-FEEDBACK-'].update(value=f"You want to move this to '{directory_for_key[event]}'")
+  if event[0] in set_of_keys:
+    window['-FEEDBACK-'].update(value=f"You want to move this to '{directory_for_key[event[0]]}'")
+    if os.path.exists(directory_for_key[event[0]]):
+      pass
+    else:
+      try:
+        os.mkdir(directory_for_key[event[0]])
+      except:
+        window['-FEEDBACK-'].update(value=f"You want to move this to '{directory_for_key[event[0]]} but couldn't create'")
+        continue
+    
+    try:
+      shutil.move(fnames[imagepointer],directory_for_key[event[0]])
+    except BaseException as e:
+      window['-FEEDBACK-'].update(value=f"You want to move this to '{directory_for_key[event[0]]} but {e}")
+      continue
+    fnames.pop(imagepointer)
+    window['-FEEDBACK-'].update(f'imagepointer is {imagepointer}')
+    window['-TITLE-'].update(f"Simple image sorter: {_fnames(imagepointer)}")
+    window['-IMAGE-'].update(data=convert_to_bytes(_fnames(imagepointer),resize=default_size,dirpath=folder),size=default_size)

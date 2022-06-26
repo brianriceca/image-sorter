@@ -8,6 +8,7 @@ import sys
 import base64
 import json
 import io
+import tempfile
 
 default_size = (600,600)
 script_install_loc = os.path.dirname(os.path.realpath(__file__))
@@ -120,8 +121,9 @@ layout = [  [sg.Text(f"Simple image sorter: {_fnames(imagepointer)}", key='-TITL
 window = sg.Window('Image Sorter', layout, resizable=True,
              return_keyboard_events=True, use_default_focus=False)
 
-of = open('eventlog.txt','a')
-                                                
+of = tempfile.NamedTemporaryFile(prefix='fs-',
+                                 suffix='.log',
+                                 dir='/tmp')
 while True:
   event, values = window.read()
   if (event == sg.WIN_CLOSED or event is None or
@@ -131,12 +133,14 @@ while True:
   if str(event).startswith('Left:') or event == 'Prev':
     imagepointer = imagepointer-1 if imagepointer > 0 else len(fnames)-1
     window['-FEEDBACK-'].update(f'imagepointer is {imagepointer}')
+    window['-NEWFN-'].update(_fnames(imagepointer))
     window['-TITLE-'].update(f"Simple image sorter: {_fnames(imagepointer)}")
     window['-IMAGE-'].update(data=convert_to_bytes(_fnames(imagepointer),resize=default_size,dirpath=source_folder),size=default_size)
     continue
   if str(event).startswith('Right:') or event == 'Next' or event == 'image_clicked':
     imagepointer = imagepointer+1 if imagepointer < len(fnames)-1 else 0
     window['-FEEDBACK-'].update(f'imagepointer is {imagepointer}')
+    window['-NEWFN-'].update(_fnames(imagepointer))
     window['-TITLE-'].update(f"Simple image sorter: {_fnames(imagepointer)}")
     window['-IMAGE-'].update(data=convert_to_bytes(_fnames(imagepointer),resize=default_size,dirpath=source_folder),size=default_size)
     continue
@@ -161,11 +165,12 @@ while True:
       continue
     fnames.pop(imagepointer)
     window['-FEEDBACK-'].update(f'imagepointer is {imagepointer}')
+    window['-NEWFN-'].update(_fnames(imagepointer))
     window['-TITLE-'].update(f"Simple image sorter: {_fnames(imagepointer)}")
     window['-IMAGE-'].update(data=convert_to_bytes(_fnames(imagepointer),resize=default_size,dirpath=source_folder),size=default_size)
 
   if event == 'Rename':
-    new_target_filename = values['-NEWFN-']
+    new_target_filename = window['-NEWFN-']
     target_filename = os.path.join(target_dir, new_target_filename)
     new_target_fullpath = os.path.join(target_dir,new_target_filename)
     if os.path.exists(new_target_fullpath):
@@ -183,11 +188,12 @@ while True:
         shutil.move(source_filename,new_target_filename)
       except BaseException as e: 
         window['-FEEDBACK-'].update(value=f"You want to rename this to {new_target_filename} but couldn't {e}")
-        values['-NEWFN-'].update(_fnames(imagepointer))
+        window['-NEWFN-'].update(_fnames(imagepointer))
         continue
 
       fnames[imagepointer] = new_target_filename
       window['-FEEDBACK-'].update(f'imagepointer is {imagepointer}')
+      window['-NEWFN-'].update(_fnames(imagepointer))
       window['-TITLE-'].update(f"Simple image sorter: {_fnames(imagepointer)}")
       window['-IMAGE-'].update(data=convert_to_bytes(_fnames(imagepointer),resize=default_size,dirpath=source_folder),size=default_size)
     

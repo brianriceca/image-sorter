@@ -15,6 +15,22 @@ script_install_loc = os.path.dirname(os.path.realpath(__file__))
 trashdir = os.path.join(os.environ.get('HOME'),'.trash')
 
 image_types = (".png", ".jpg", ".jpeg", ".tiff", ".bmp")
+key_config_file = os.path.join(script_install_loc,'keys-and-dirs.json')
+source_folder = '.'
+
+if len(sys.argv) > 1:
+  if sys.argv[1] == '-c':
+    if len(sys.argv) == 2:
+      print(f'{sys.argv[0]}: usage: {sys.argv[0]} [ -c configfile ] [ dir ]')
+      sys.exit(1)
+    if not os.path.exists(sys.argv[2]):
+      print(f'{sys.argv[0]}: usage: {sys.argv[2]} not found')
+      sys.exit(2)
+  source_folder = sys.argv[1]
+
+if not (os.exists(source_folder) and os.path.isdir(source_folder)):
+  print(f'{sys.argv[0]}: usage: {source_folder} is bad')
+  sys.exit(3)
 
 def convert_to_bytes(file_or_bytes, resize=None, dirpath=None):
     '''
@@ -49,11 +65,6 @@ def convert_to_bytes(file_or_bytes, resize=None, dirpath=None):
         img.save(bio, format="PNG")
         del img
         return bio.getvalue()
-
-if len(sys.argv) > 1:
-  source_folder = sys.argv[1]
-else:
-  source_folder = '.'
 
 try:
   file_list = os.listdir(source_folder)         # get list of files in source_folder

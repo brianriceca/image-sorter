@@ -107,10 +107,10 @@ keyhelp1 = ' '.join([f'{k}:{os.path.basename(directory_for_key[k])}' for k in so
 keyhelp2 = ' '.join([f'{k}:{os.path.basename(directory_for_key[k])}' for k in sorted(directory_for_key.keys()) if not k.islower()])
 keyhelp_width = max(len(keyhelp1),len(keyhelp2))
 
-layout = [  [sg.Text(f"Simple image sorter: {_fnames(imagepointer)}", key='-TITLE-')],
+layout = [  [sg.Text(f"Simple image sorter: {_fnames(imagepointer)} [{imagepointer}/{len(fnames)}]", key='-TITLE-')],
             [sg.Text(keyhelp1, size=(keyhelp_width,1), key='-KEYHELP1-')],
             [sg.Text(keyhelp2, size=(keyhelp_width,1), key='-KEYHELP2-')],
-            [sg.Text('', size=(80,1), key='-FEEDBACK-')],
+            [sg.Text('', size=(120,2), key='-FEEDBACK-')],
             [sg.Image(convert_to_bytes(_fnames(imagepointer),resize=default_size,dirpath=source_folder),size=default_size,key='-IMAGE-')],
             [sg.Text((p := 'Change filename to:'),size=(len(p),1)),
              sg.InputText(fn := _fnames(imagepointer),size=(len(fn),1), key='-NEWFN-'),      
@@ -134,20 +134,20 @@ while True:
     imagepointer = imagepointer-1 if imagepointer > 0 else len(fnames)-1
     window['-FEEDBACK-'].update(f'imagepointer is {imagepointer}')
     window['-NEWFN-'].update(_fnames(imagepointer))
-    window['-TITLE-'].update(f"Simple image sorter: {_fnames(imagepointer)}")
+    window['-TITLE-'].update(f"Simple image sorter: {_fnames(imagepointer)} [{imagepointer}/{len(fnames)}]")
     window['-IMAGE-'].update(data=convert_to_bytes(_fnames(imagepointer),resize=default_size,dirpath=source_folder),size=default_size)
     continue
-  if str(event).startswith('Right:') or event == 'Next' or event == 'image_clicked':
+  if str(event).startswith('Right:') or event == 'Next' or event == ' ' or event == 'image_clicked':
     imagepointer = imagepointer+1 if imagepointer < len(fnames)-1 else 0
     window['-FEEDBACK-'].update(f'imagepointer is {imagepointer}')
     window['-NEWFN-'].update(_fnames(imagepointer))
-    window['-TITLE-'].update(f"Simple image sorter: {_fnames(imagepointer)}")
+    window['-TITLE-'].update(f"Simple image sorter: {_fnames(imagepointer)} [{imagepointer}/{len(fnames)}]")
     window['-IMAGE-'].update(data=convert_to_bytes(_fnames(imagepointer),resize=default_size,dirpath=source_folder),size=default_size)
     continue
 
   source_filename = os.path.join(source_folder,fnames[imagepointer])
 
-  if event == "Delete":
+  if event == "Delete" or event == chr(63272):
     window['-FEEDBACK-'].update(value=f"You want to delete this")
     if os.path.exists(trashdir):
       pass
@@ -155,18 +155,18 @@ while True:
       try:
         os.mkdir(trashdir)
       except:
-        window['-FEEDBACK-'].update(value=f"You want to move this to {trashdir} but couldn't create")
+        window['-FEEDBACK-'].update(value=f"You want to delete this to {trashdir} but couldn't create")
         continue
     
     try:
       shutil.move(source_filename,trashdir)
     except BaseException as e:
-      window['-FEEDBACK-'].update(value=f"You want to move this to {trashdir} but {e}")
+      window['-FEEDBACK-'].update(value=f"deletion failed {e}")
       continue
     fnames.pop(imagepointer)
     window['-FEEDBACK-'].update(f'imagepointer is {imagepointer}')
     window['-NEWFN-'].update(_fnames(imagepointer))
-    window['-TITLE-'].update(f"Simple image sorter: {_fnames(imagepointer)}")
+    window['-TITLE-'].update(f"Simple image sorter: {_fnames(imagepointer)} [{imagepointer}/{len(fnames)}]")
     window['-IMAGE-'].update(data=convert_to_bytes(_fnames(imagepointer),resize=default_size,dirpath=source_folder),size=default_size)
 
   if event == 'Rename':
@@ -194,7 +194,7 @@ while True:
       fnames[imagepointer] = new_target_filename
       window['-FEEDBACK-'].update(f'imagepointer is {imagepointer}')
       window['-NEWFN-'].update(_fnames(imagepointer))
-      window['-TITLE-'].update(f"Simple image sorter: {_fnames(imagepointer)}")
+      window['-TITLE-'].update(f"Simple image sorter: {_fnames(imagepointer)} [{imagepointer}/{len(fnames)}]")
       window['-IMAGE-'].update(data=convert_to_bytes(_fnames(imagepointer),resize=default_size,dirpath=source_folder),size=default_size)
     
   if event[0] in set_of_keys:
@@ -204,16 +204,18 @@ while True:
       try:
         os.mkdir(target_dir)
       except:
-        window['-FEEDBACK-'].update(value=f"You want to move this to {target_dir} but couldn't create")
+        window['-FEEDBACK-'].update(value=f"Couldn't create dir {target_dir}")
         continue
     
 
     try:
       shutil.move((source_filename := os.path.join(source_folder,fnames[imagepointer])),directory_for_key[event[0]])
     except BaseException as e:
-      window['-FEEDBACK-'].update(value=f"You want to move this to '{directory_for_key[event[0]]} but {e}")
+      print(f"exception {e} while moving to '{directory_for_key[event[0]]}")
+      window['-FEEDBACK-'].update(value=f"exception {e} while moving to '{directory_for_key[event[0]]}")
       continue
     fnames.pop(imagepointer)
     window['-FEEDBACK-'].update(f'imagepointer is {imagepointer}')
-    window['-TITLE-'].update(f"Simple image sorter: {_fnames(imagepointer)}")
+    window['-TITLE-'].update(f"Simple image sorter: {_fnames(imagepointer)} [{imagepointer}/{len(fnames)}]")
+    window['-NEWFN-'].update(_fnames(imagepointer))
     window['-IMAGE-'].update(data=convert_to_bytes(_fnames(imagepointer),resize=default_size,dirpath=source_folder),size=default_size)

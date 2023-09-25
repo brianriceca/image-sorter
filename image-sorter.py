@@ -2,6 +2,7 @@
 
 import PySimpleGUI as sg                        
 import os
+import subprocess
 import shutil
 import PIL.Image as pilimage
 import sys
@@ -9,58 +10,82 @@ import base64
 import json
 import io
 import tempfile
+import argparse
+
+key_config_base_filename = 'keys-and-dirs.json'
+parser = argparse.ArgumentParser()
+parser.add_argument('-c', '--configfile')
+parser.add_argument('indir')
+
+args = parser.parse_args()
+if args.configfile:
+  key_config_base_filename = args.configfile
+source_folder = args.indir
+print(f'key_config_base_filename is {key_config_base_filename}')
 
 default_size = (600,600)
 script_install_loc = os.path.dirname(os.path.realpath(__file__))
 trashdir = os.path.join(os.environ.get('HOME'),'.trash')
 
 image_types = (".png", ".jpg", ".jpeg", ".tiff", ".bmp")
-key_config_file = os.path.join(script_install_loc,'keys-and-dirs.json')
-source_folder = '.'
+video_types = (".mp4")
 
-if len(sys.argv) > 1:
-  if sys.argv[1] == '-c':
-    if len(sys.argv) == 2:
-      print(f'{sys.argv[0]}: usage: {sys.argv[0]} [ -c configfile ] [ dir ]')
-      sys.exit(1)
-    if not os.path.exists(sys.argv[2]):
-      print(f'{sys.argv[0]}: usage: {sys.argv[2]} not found')
-      sys.exit(2)
-  source_folder = sys.argv[1]
-
-if not (os.exists(source_folder) and os.path.isdir(source_folder)):
-  print(f'{sys.argv[0]}: usage: {source_folder} is bad')
+if not (os.path.exists(source_folder) and os.path.isdir(source_folder)):
+  print(f'{sys.argv[0]}: usage: source folder {source_folder} is bad')
   sys.exit(3)
 
-def convert_to_bytes(file_or_bytes, resize=None, dirpath=None):
+key_config_file = os.path.join(script_install_loc,key_config_base_filename)
+
+def convert_to_bytes(fname, resize=None, dirpath=None):
     '''
-    Will convert into bytes and optionally resize an image that is a file or a base64 bytes object.
+    Will convert into bytes and optionally resize an image that is a file 
     Turns into  PNG format in the process so that can be displayed by tkinter
-    :param file_or_bytes: either a string filename or a bytes base64 image object
-    :type file_or_bytes:  (Union[str, bytes])
+    :param fname: a string filename 
+    :type fname:  str
     :param resize:  optional new size
     :type resize: (Tuple[int, int] or None)
     :param dirpath: directory path to file
     :return: (bytes) a byte-string object
     :rtype: (bytes)
     '''
-    if isinstance(file_or_bytes, str):
+    if isinstance(fname, str):
+      # first, is it a video file? If so, we need to point instead to the
+      # video sample frame, generating it if need be
+      if fname.endswith(video_types):
+        sampleframe_name = "." + fname + ".png"       
         if dirpath is None:
-            img = pilimage.open(file_or_bytes)
+          sampleframe_name = os.path.join(".",sampleframe_name)
         else:
-            img = pilimage.open(os.path.join(dirpath,file_or_bytes))
+          sampleframe_name = os.path.join(dirpath,sampleframe_name)
+        if not os.path.exists(sampleframe_name):
+          print(f"about to generate {sampleframe_name}")
+          print('ffmpeg -i \'' + fname + '\'' + " -vf select='eq(n\,30)' " +
+                    '\'' + sampleframe_name + '\' >/tmp/out.$$ 2>&1')
+          with open('/tmp/ffmpeg.out.' + str(os.getpid()),"w") as logfile:
+            subprocess.run(['ffmpeg',
+                            '-i', 
+                            fname, 
+                            "-vf",
+                            "select='eq(n\,30)'",
+                            sampleframe_name],
+                          stdout=logfile, stderr=subprocess.STDOUT)
+          print(f"generated {sampleframe_name}")
+        fname = sampleframe_name              
+        img = pilimage.open(os.path.join(dirpath,fname))
+      else:
+        if dirpath is None:
+          fname = os.path.join(".",fname)
+        else:
+          fname = os.path.join(dirpath,fname)
+        img = pilimage.open(os.path.join(dirpath,fname))
     else:
-        try:
-            img = pilimage.open(io.BytesIO(base64.b64decode(file_or_bytes)))
-        except Exception as e:
-            dataBytesIO = io.BytesIO(file_or_bytes)
-            img = pilimage.open(dataBytesIO)
+        raise ValueException;
 
     cur_width, cur_height = img.size
     if resize:
         new_width, new_height = resize
         scale = min(new_height/cur_height, new_width/cur_width)
-        img = img.resize((int(cur_width*scale), int(cur_height*scale)), pilimage.ANTIALIAS)
+        img = img.resize((int(cur_width*scale), int(cur_height*scale)), pilimage.LANCZOS)
     with io.BytesIO() as bio:
         img.save(bio, format="PNG")
         del img
@@ -72,7 +97,8 @@ except:
   file_list = []
 
 fnames = [f for f in file_list if os.path.isfile(
-            os.path.join(source_folder, f)) and f.lower().endswith(image_types)
+            os.path.join(source_folder, f)) and 
+            (f.lower().endswith(image_types) or f.lower().endswith(video_types))
             and not f.startswith('.')
           ]
 
@@ -94,9 +120,8 @@ def dict_raise_on_duplicates(ordered_pairs):
       d[k] = v
   return d
 
-key_config_file = os.path.join(script_install_loc,'keys-and-dirs.json')
 if os.path.exists(key_config_file):
-  with open(os.path.join(script_install_loc,'keys-and-dirs.json'),encoding='utf-8') as f:
+  with open(os.path.join(script_install_loc,key_config_base_filename),encoding='utf-8') as f:
     directory_for_key = json.load(f,object_pairs_hook=dict_raise_on_duplicates)
 
 if len(directory_for_key) == 0:
